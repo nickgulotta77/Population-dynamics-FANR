@@ -202,10 +202,10 @@ data2<-data1 %>% mutate(Time, NWNH, SH) %>%
   plot5 + ylab( "Final abundance") + theme_classic() #plot 5
   
   
-  #Question 4
+  #Question 4.. Answered in excel. If lower population then there will be a greater surival. 
   a<-beta0-beta1*IA
   NoHarvest<-IA*a
-  ### Yes answered in excel. if(lower pop){ greater survival}
+
   
   #Q5
   NumberHarvested<-data4[which(data4$AF== max(data4$AF)),1]*2
