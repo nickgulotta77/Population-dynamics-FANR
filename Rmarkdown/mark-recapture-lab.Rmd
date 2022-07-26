@@ -1,0 +1,119 @@
+---
+title: "Mark-recapture lab"
+author: "Nick Gulotta"
+date: "11/10/2021"
+output:
+  html_document:
+    theme: journal
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### **Question 1**
+**The Lincoln-Peterson estimate of abundance is N=200.**
+
+```{r lincoln, include=T, warning=F}
+n1<-100
+n2<-50
+m2<-25
+
+N<-n1*n2/m2
+N
+```
+
+
+```{r data, echo=F}
+#data
+capture.histories<-read.table("/Users/nickg/OneDrive/Desktop/R projects/Population-dynamics-FANR/data/CH-SO-Andy07.inp", sep=" ",
+                                colClasses=c("character", "character"),
+                                col.names=c("ch", "freq"))
+
+#format data
+ch.mat <- t(sapply(capture.histories$ch,
+                   function(x) as.integer(strsplit(x, "")[[1]])))
+
+#format data
+dimnames(ch.mat) <- list(paste0("StinkPot", 1:nrow(capture.histories)),
+                         paste0("Time", 1:6))
+```
+
+### **Models**
+
+```{r, models, include=T, warning=F}
+require(mra)
+
+#M0 model
+M0 <- F.huggins.estim(capture=~1, recapture=NULL, histories=ch.mat)
+M0
+
+round(M0$p.hat, digits=3)
+
+#Mb model
+Mb <- F.huggins.estim(capture=~1, recapture=~1, histories=ch.mat)
+Mb
+round(Mb$p.hat, digits=3)
+round(Mb$c.hat, digits=3)                      
+#Mt model                      
+time <- tvar(factor(1:6), nan=nrow(ch.mat)) ## 6 time periods. 14 animals.
+Mt <- F.huggins.estim(capture=~time, recapture=NULL, histories=ch.mat)
+Mt
+round(Mt$p.hat, digits=3)
+round(Mt$c.hat, digits=3)                 
+#Mtb model                    
+Mtb <- F.huggins.estim(capture=~time, recapture=~1, histories=ch.mat)
+Mtb
+round(Mtb$p.hat, digits=3)
+round(Mtb$c.hat, digits=3)
+
+```
+
+```{r table1, include=T, warning=F, message=F}
+# create HTML table using kableExtra
+library(kableExtra)
+# create HTML table using kableExtra
+library(kableExtra)
+require(knitr)
+
+Model<-(c("M0", "Mt", "Mb", "Mtb"))
+Model_Description<-(c("The most basic model in which p and c are constant", "p differs among sampling occasions and pt = ct", "Behavioral response model in which p and c differ.", "Combination of models Mt and Mb"))
+N<-(c(41.03, 37.79,18.58, 21.70))
+SE<-(c(16.66, 14.77, 2.15, 13.12))
+AICc<-(c(89.91, 85.47, 87.34, 87.58))
+tab<-data.frame(Model,Model_Description,N,SE,AICc)
+
+
+#table 
+options(knitr.kable.NA = "") # leave NA cells empty
+knitr::kable(tab, digits = 3,booktabs=T, align="c",
+       caption = "<center><strong>Table 1. Results for mark-recapture analysis for stink pots.</strong></center>")%>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "bordered"))
+```
+
+```{r, plot, include=T, warning=F}
+Time<-(c(1, 2, 3, 4, 5, 6))
+
+pt<-(c(0.159, 0.079, 0.185, 0.053 ,0.079,0))
+
+pdata<-data.frame(Time,pt)
+
+require(ggplot2)
+ggplot(pdata, aes(x=Time, y=pt)) + geom_point() + geom_line()+
+  scale_x_continuous("Time interval", breaks =c(1,2,3,4,5,6)) +
+  scale_y_continuous("Capture probability (pt)")+
+  theme_classic() +
+  ggtitle(label ="Fig 1. The capture probabilty of stinkpots over the season.")+
+  theme(plot.title = element_text(face = "bold", hjust=0.5), plot.subtitle=element_text(hjust=0.5))
+
+```
+
+
+### **Question 4**
+
+**Model $M_t$ has the lowest AICc value. Model $M_t$ does not measure behavioural responses but model $M_b$ and $M_{tb}$ both do. Model $M_b$ suggests that recapture is relatively low (0.06) suggesting a trap shy strategy, and model $M_{tb}$ shows that recapture varies depending on the the trapping inteval. For interval 2 there is a low recaptue (0.05), interval 3 there is a higher recapture rate (0.17), and interval 4 has a lower recapture (0.08). This suggests for this model that there is a trap shy behavior after the first time an individual is caught and marked,a trap happy-ish response for interval 3, and then for interval 4 and 5 trap shyness.  **
+
+### **Question 5**
+
+**Model $M_0$ was the worst model because captures and recaptures varied overtime and this model was unable to account for this variation since it assumed both were constant over time. **

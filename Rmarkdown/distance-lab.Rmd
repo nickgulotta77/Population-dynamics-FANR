@@ -1,0 +1,91 @@
+---
+title: "Distance sampling-lab"
+author: "Nick Gulotta"
+date: "11/3/2021"
+output:
+  html_document:
+    theme: journal
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r data, include=T, message=F, warning=F}
+require(Distance)
+require(readr)
+require(gridExtra)
+
+#data
+data<-read.csv("/Users/nickg/OneDrive/Desktop/R projects/Population-dynamics-FANR/data/gazelle_data.csv")
+```
+
+### **Data manipulation**
+
+```{r format, include=T, message=F, warning=F}
+#Data manipulation
+data2 <- data[,c("Transect", "GroupSize")]
+colnames(data2) <- c("Sample.Label", "size") ## Rename
+data2$distance <- data$Distance / 1000 ## Convert to km
+data2$Region.Label <- 1 ## Just one region
+data2$Effort <- data$TransectLength / 1000 ## Convert to km
+data2$Area <- data$RegionArea ## Square km
+```
+
+### **Half-normal model**
+
+```{r hn, include= T, message=F, warning=F}
+model.hn <- ds(data=data2, key="hn",
+               transect="line", truncation=250/1000,
+               adjustment=NULL, quiet=TRUE)
+summary(model.hn)
+```
+
+### **Half-hazard model**
+
+```{r hr, include= T, message=F, warning=F}
+model.hr <- ds(data=data2, key="hr",
+               transect="line", truncation=250/1000,
+               adjustment=NULL, quiet=TRUE)
+summary(model.hr)
+```
+
+
+
+### **Plot**
+
+```{r plot, include= T, message=F, warning=F, echo=FALSE}
+par(mfrow=c(1,2))
+plot(model.hn, main="Half-normal")
+plot(model.hr, main="Half-hazard")
+```
+
+### **Table**
+
+```{r table1, include=T, warning=F, message=F, echo=FALSE}
+# create HTML table using kableExtra
+library(kableExtra)
+# create HTML table using kableExtra
+library(kableExtra)
+require(knitr)
+
+Model<-(c("Half-normal", "Half-hazard"))
+pbar<-(c(0.39, 0.52))
+Abundance<-(c(9067001,6851287))
+SEn<-(c(943307.8,638059.2))
+Density<-(c(1813400,1370257))
+SEd<-(c(188661.6,127611.8))
+AIC<-(c(-430.39,-426.20))
+
+
+tab<-data.frame(Model, pbar, Abundance, SEn, Density, SEd, AIC)
+colnames(tab) <- c("Model", "pbar", "Abundance", "SE(N)", "Density", "SE(D)", "AIC") ## Rename
+
+
+#table 
+options(knitr.kable.NA = "") # leave NA cells empty
+knitr::kable(tab, digits = 2,booktabs=T, align="c",
+       caption = "<center><strong>Table 1. Results for distance sampling of gazelle for half-normal and half-hazard models.</strong></center>")%>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "bordered"))
+```

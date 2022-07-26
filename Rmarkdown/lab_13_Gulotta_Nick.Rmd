@@ -1,0 +1,202 @@
+---
+title: "Lab 13"
+author: "Nick Gulotta"
+date: "12/7/2021"
+output:
+  html_document:
+    theme: journal
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r data, include=T, message=F, warning=F}
+require(marked)
+require(readr)
+require(gridExtra)
+require(dplyr)
+
+#data
+cjs.data <- read.table("/Users/nickg/OneDrive/Desktop/R projects/Population-dynamics-FANR/data/cawa-cjs.inp", sep=" ",
+                               colClasses=c("character","character"),
+                               col.names=c("ch", "count"))
+
+js.data <- read.table("/Users/nickg/OneDrive/Desktop/R projects/Population-dynamics-FANR/data/CH-SO-Dean-AllYears.inp", sep=" ",
+                               colClasses=c("character","character"),
+                               col.names=c("ch", "count"))
+```
+
+
+### **Exercise I**
+
+#### **$Φ(.)p(.)$ – No variation in apparent survival**
+
+```{r, mod1, include=T, warning=F,message=F}
+phi0.p0 <- crm(data=cjs.data, model="CJS", hessian=TRUE,
+model.parameters=list(
+Phi=list(formula=~1), ## No variation
+p=list(formula=~1))) ## No variation
+
+phi0.p0
+
+predict(phi0.p0)
+```
+
+#### **$Φ(t)p(.)$ – Temporal variation in apparent survival**
+
+```{r, mod2, include=TRUE, warning=F, message=F}
+phiTime.p0 <- crm(data=cjs.data, model="cjs", hessian=TRUE,
+model.parameters=list(
+Phi=list(formula=~time), ## Temporal variation
+p=list(formula=~1))) ## No variation
+
+phiTime.p0
+
+predict(phiTime.p0)
+```
+
+#### **$Φ(.)p(t)$ – Temporal variation in capture probability**
+
+```{r, mod3, include=T, warning=F, message=F}
+pTime.p0<-crm(data=cjs.data, model="cjs", hessian=TRUE,
+model.parameters=list(
+Phi=list(formula=~1), ## no variation
+p=list(formula=~time))) ## variation
+
+pTime.p0
+
+predict(pTime.p0)
+```
+#### **$Φ(t)p(t)$ – Temporal variation in apparent survival and capture probability**
+
+```{r, mod4, include=T, warning=F, message=F}
+pPhiTime.p0<-crm(data=cjs.data, model="cjs", hessian=TRUE,
+model.parameters=list(
+Phi=list(formula=~time), ## variation
+p=list(formula=~time))) ## variation
+
+pPhiTime.p0
+
+pPhiTime.p<-predict(pPhiTime.p0)
+```
+
+#### **Which model is the best?**
+
+**The first model that had no variation was the best model since it had the lowest AIC score.**
+
+```{r table1, include=T, warning=F, message=F, echo=FALSE}
+# create HTML table using kableExtra
+library(kableExtra)
+# create HTML table using kableExtra
+library(kableExtra)
+require(knitr)
+
+#Extract estimates from model w/no variation
+pred.phi0.p0<-predict(phi0.p0)
+pred.phi0<-pred.phi0.p0[["Phi"]]
+pred.p0<-pred.phi0.p0[["p"]]
+
+#make tibbles to join
+pred.phi0<-as_tibble(pred.phi0)
+pred.p0<-as_tibble(pred.p0)
+
+#full join both datasets for table
+d2<-full_join(pred.phi0,pred.p0)
+
+Model<-c("No variation in apprent surival or capture probability"," ")
+Term<-c("Phi","p")
+AIC<-c(168.64," ")
+
+
+tab<-data.frame(Model,Term,d2,AIC)
+colnames(tab) <- c("Model","Term" ,"occ", "Estimate", "SE", "lcl", "ucl", "AIC") ## Rename
+
+
+#table 
+options(knitr.kable.NA = "") # leave NA cells empty
+knitr::kable(tab, digits = 2,booktabs=T, align="c",
+       caption = "<center><strong>Table 1. Results for distance sampling of gazelle for half-normal and half-hazard models.</strong></center>")%>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "bordered"))
+```
+
+### **Exercise II**
+
+#### **Jolly-Serber w/constant capture probability (p), constant entrance probabilities (pent, $b_t$), and temporal variation in apparent survival**
+
+```{r, mod5, include=T, warning=F, message=F}
+js.phi0.pent0.p0 <- crm(data=js.data, model="JS", hessian=TRUE,
+                        model.parameters=list(
+                          Phi=list(formula=~time), ## No variation
+                          pent=list(formula=~1), ## No variation
+                          p=list(formula=~1))) ## No variation
+
+js0est <- predict(js.phi0.pent0.p0)
+js0est
+
+
+n <- nrow(js.data) # number of individuals captured
+Nsuper <- n+js0est$N$estimate # Super-population size
+Nsuper
+
+b <- js0est$pent$estimate # Entrance probabilities after first time period
+b0 <- 1-sum(b) # Compute first entrance probability
+round(b, digits=16)
+
+R <- Nsuper*b # Recruits
+R
+
+
+Phi <- js0est$Phi$estimate ## Apparent survival probability
+Phi
+
+```
+
+#### **Interpretation of estimates**
+**The capture probability was p= 0.26, and the estimated number of individuals not detected was n= 72.82. **
+
+#### **Compute: super population size, number of recruits in each time interval, abundance at each time point**
+
+```{r, compute, include=T}
+n <- nrow(js.data) # number of individuals captured
+Nsuper <- n+js0est$N$estimate # Super-population size
+Nsuper
+
+b <- js0est$pent$estimate # Entrance probabilities after first time period
+b0 <- 1-sum(b) # Compute first entrance probability
+round(b, digits=16)
+
+R <- Nsuper*b # Recruits
+R
+
+
+Phi <- js0est$Phi$estimate ## Apparent survival probability
+Phi
+
+
+nYears <- length(R)+1
+N <- rep(NA, nYears)
+N[1] <- Nsuper*b0 ## Initial abundance
+N[2] <- N[1]*Phi + R[1] ## Abundance in year 2
+N[3] <- N[2]*Phi + R[2] ## Abundance in year 3
+N[4] <- N[3]*Phi + R[3] ## Abundance in year 4
+N[5] <- N[4]*Phi + R[4] ## Abundance in year 5
+N[6] <- N[5]*Phi + R[5] ## Abundance in year 6
+N[7] <- N[6]*Phi + R[6] ## Abundance in year 7
+N[8] <- N[7]*Phi + R[7] ## Abundance in year 8
+N[9] <- N[8]*Phi + R[8] ## Abundance in year 9
+round(N, digits=0)
+```
+
+#### **Plot**
+
+```{r, plot2, include=T, warning=F, message=F}
+
+lambda <- N[2:9]/N[1:8]
+lam<-round(lambda, digits=16)
+
+Years<-1:8
+
+plot(Years, lam, type="b", xlab="Year", ylab="Lambda")
+```

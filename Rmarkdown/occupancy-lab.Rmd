@@ -1,0 +1,156 @@
+---
+title: "Occupancy-lab"
+author: "Nick Gulotta"
+date: "10/27/2021"
+output:
+  html_document:
+    theme: journal
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r data, include=F, message=F, warning=F}
+require(unmarked)
+require(readr)
+
+#data
+quail<-read.csv("/Users/nickg/OneDrive/Desktop/R projects/Population-dynamics-FANR/data/quail.csv")
+dipnet<-read.csv("/Users/nickg/OneDrive/Desktop/R projects/Population-dynamics-FANR/data/dipnet.csv")
+
+```
+
+## **Ex 1.Null Model-single season**
+```{r dataset, include=F}
+## First, extract columns 2-4 with the occupancy data
+occData <- quail[,c("season1visit1", "season1visit2",
+                          "season1visit3", "season1visit4")]
+
+## Next, extract the column with the site covariate.
+## It must be formatted as a data.frame
+habIndex <- quail[,"veght",drop=FALSE]
+## Finally, put the pieces together
+umf <- unmarkedFrameOccu(y=occData, siteCovs=habIndex)
+
+summary(umf)
+```
+
+#### **Ex.1-Null model output**
+
+```{r nullmodeloutput, include=T, warning=F, message=F}
+#null model
+nullModel <- occu(~1 ~1, umf)
+summary(nullModel)
+
+
+## Occupancy estimate - Pr(site is occupied)
+backTransform(nullModel, type="state")
+
+
+## Detection estimate - Pr(detection | site is occupied)
+backTransform(nullModel, type="det")
+```
+
+#### **Ex.1-Question A**
+
+-	The probability that a site is occupied is Ψ = 0.62 (SE= 0.07), and the probability of detection on a single visit if the site is occupied is p = 0.48 (SE=0.05). 
+
+- There is a 0.62 probability that a site will be occupied by a quail, and if you visit that site at least once you have a 0.48 probability of detecting a quail.
+
+### **Ex.1-Single season vegetation added as covariate**
+
+```{r vegoutput, include=T, warning=F, message=F}
+#model 2 habitat index
+detNullOccHab <- occu(~1 ~veght, umf)
+summary(detNullOccHab)
+
+#visualize
+predData <- data.frame(veght=seq(from=1, to=5, length.out=10))
+
+predOcc <- predict(detNullOccHab, newdata=predData,
+                   type="state", append=TRUE)
+
+
+```
+
+#### **Ex.1- Question c **
+- The second model that contains the covariate of vegetation height had a lower AIC value (AIC = 222.59) compared to the null-model (AIC = 229.06). This indicates  model containing the covariate explains more of the variation with the least amount of parameters, and is essentially a better model than the null-model. 
+
+#### **EX.1-Plot**
+
+```{r plot, include=T, warning=F, message=F}
+#plot
+plot(Predicted ~ veght, data=predOcc, type="l", ylim=c(0,1),
+     xlab="Vegetation height", ylab="Occupancy")
+lines(lower ~ veght, data=predOcc, lty=2)
+lines(upper ~ veght, data=predOcc, lty=2)
+```
+
+#### **Ex.1-Question E**
+- The occurrence probability increases with increasing vegetation height. The higher the vegetation the higher probability of quail occupying a site. 
+
+
+
+### **Ex.2-null model multi -season **
+
+```{r dset, include=F}
+occData <- dipnet[,c("X2015_TeamA", "X2015_TeamB", "X2015_TeamC", "X2015_TeamD", "X2015_TeamE", "X2015_TeamF",
+                "X2015_TeamG" ,"X2016_TeamA", "X2016_TeamB", "X2016_TeamC", "X2016_TeamD", "X2016_TeamE",
+                      "X2016_TeamF" ,"X2016_TeamG", "X2017_TeamA", "X2017_TeamB", "X2017_TeamC", "X2017_TeamD",
+                      "X2017_TeamE" ,"X2017_TeamF", "X2017_TeamG", "X2018_TeamA", "X2018_TeamB", "X2018_TeamC",
+                      "X2018_TeamD", "X2018_TeamE", "X2018_TeamF", "X2018_TeamG", "X2019_TeamA", "X2019_TeamB",
+                     "X2019_TeamC", "X2019_TeamD", "X2019_TeamE", "X2019_TeamF", "X2019_TeamG")]
+umfMS <- unmarkedMultFrame(y=occData, numPrimary=5)
+
+summary(umfMS)
+
+```
+
+
+```{r nmod2, include=T, warning=F, message=F}
+#null model
+nullModelMS <- colext(~1, ~1, ~1, ~1, umfMS)
+summary(nullModelMS)
+
+
+#backtransform
+backTransform(nullModelMS, type="psi")
+
+backTransform(nullModelMS, type="col")
+
+backTransform(nullModelMS, type="ext")
+
+backTransform(nullModelMS, type="det")
+
+```
+
+
+```{r table1, include=T, warning=F, message=F}
+# create HTML table using kableExtra
+library(kableExtra)
+# create HTML table using kableExtra
+library(kableExtra)
+require(knitr)
+
+Estimate<-(c(0.98, 0.99,0.000139, 0.294))
+SE<-(c(0.164,0.27, 0.00508, 0.041))
+Term<-(c("psi", "gamma", "epsilon", "p"))
+tab<-data.frame(Term,Estimate,SE)
+
+
+#table 
+options(knitr.kable.NA = "") # leave NA cells empty
+knitr::kable(tab, digits = 3,booktabs=T, align="c",
+       caption = "<center><strong>Table 1. Multi-season occupancy of two-lined salamanders.</strong></center>")%>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "bordered"))
+```
+
+#### **Ex.2- Questions c-e**
+
+c. There is a high probability of occupancy (ψ=0.98), high probability of colonization(γ=0.99), and a low probability of extinction ($\epsilon$=0.00013). If you visit a site at least once the probability of detecting a salamander is (p=0.29).
+
+d. Since colonization is extremely high and extinction is very low this would mean salamanders are occupying sites consistently from year-year.  
+
+e. I would be a bit skeptical with the results just from a sampling perspective. I think we might have violated the assumption of independence by selecting sites that were easy to access via roads and distance between ponds. To improve this going forward, we should use a stratified random sampling scheme. This would reduce the amount of bias and improve the overall confidence in the estimate. Additionally, the assumption of population closure was potentially violated. This would increase the bias in the estimate which would partially explain the high colonization and occupancy, and low colonization.  
