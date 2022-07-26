@@ -1,6 +1,6 @@
 # Population-dynamics-FANR
 
-This repository contains lecture slides, data, R-scripts, and Rmarkdown files for Advanced Population Dynamcis. 
+This repository contains lecture slides, labs, data to complete labs, R-scripts, and Rmarkdown files for Advanced Population Dynamcis. 
 
 ## General Project File Structure
 
