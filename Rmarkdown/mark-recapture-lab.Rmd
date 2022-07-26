@@ -2,9 +2,11 @@
 title: "Mark-recapture lab"
 author: "Nick Gulotta"
 date: "11/10/2021"
-output:
-  html_document:
+always_allow_html: true
+output: github_document
+html_document:
     theme: journal
+    
 ---
 
 

@@ -2,8 +2,8 @@
 title: "Lab 13"
 author: "Nick Gulotta"
 date: "12/7/2021"
-output:
-  html_document:
+output: github_document
+html_document:
     theme: journal
 ---
 
