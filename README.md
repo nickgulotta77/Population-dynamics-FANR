@@ -1,5 +1,6 @@
 # Population-dynamics-FANR
 
+This repository contains lecture slides, data, R-scripts, and Rmarkdown files for Advanced Population Dynamcis. 
 
 ## General Project File Structure
 
@@ -69,3 +70,8 @@
 
 
 ```
+## Markdown file
+* Click the link below to access markdown files for occupancy, mark-recapture, disance sampling, and survival labs
+*https://github.com/nickgulotta77/Population-dynamics-FANR/tree/main/Rmarkdown/markdown_files
+* Click this link for raw scripts for each lab
+* https://github.com/nickgulotta77/Population-dynamics-FANR/tree/main/lab%20scripts
